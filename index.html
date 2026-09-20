@@ -1,0 +1,3033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A* Search Algorithm — DAA Project | Sahil Wadekar</title>
+  
+  <!-- Google Fonts: Space Grotesk, IBM Plex Sans, IBM Plex Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* CSS Variables & Blueprint Theme */
+    :root {
+      --bg-base: #0d1220;
+      --bg-panel: #131a2e;
+      --bg-panel-subtle: #172038;
+      --bg-card: #162038;
+      --border-color: #223258;
+      --border-subtle: #1a2744;
+      
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      --accent-cyan: #06b6d4;
+      --accent-cyan-hover: #22d3ee;
+      --accent-cyan-dim: rgba(6, 182, 212, 0.15);
+      
+      --color-start: #10b981;
+      --color-start-glow: rgba(16, 185, 129, 0.4);
+      --color-goal: #ec4899;
+      --color-goal-glow: rgba(236, 72, 153, 0.4);
+      --color-wall: #060913;
+      --color-open: #f59e0b;
+      --color-open-bg: rgba(245, 158, 11, 0.35);
+      --color-closed: #6366f1;
+      --color-closed-bg: rgba(99, 102, 241, 0.32);
+      --color-path: #22d3ee;
+      --color-path-glow: rgba(34, 211, 238, 0.6);
+      
+      --font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+      color-scheme: dark;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.65;
+      background-image: 
+        linear-gradient(to right, rgba(34, 50, 88, 0.22) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(34, 50, 88, 0.22) 1px, transparent 1px);
+      background-size: 32px 32px;
+      background-attachment: fixed;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Focus styling */
+    :focus-visible {
+      outline: 2px solid var(--accent-cyan);
+      outline-offset: 3px;
+    }
+
+    /* Top Identity Band */
+    .top-identity-band {
+      background: #0a0e1a;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .identity-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .identity-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .identity-badge strong {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .identity-items {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .identity-item span.label {
+      color: var(--text-dim);
+      margin-right: 0.35rem;
+    }
+
+    .identity-item span.val {
+      color: var(--accent-cyan);
+      font-weight: 500;
+    }
+
+    /* Sticky Navigation */
+    .sticky-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 18, 32, 0.94);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-color) transparent;
+      padding: 0.5rem 1rem;
+      gap: 0.5rem;
+    }
+
+    .nav-inner::-webkit-scrollbar {
+      height: 4px;
+    }
+    .nav-inner::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 0.4rem 0.75rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      transition: color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--accent-cyan);
+      background: var(--accent-cyan-dim);
+    }
+
+    /* Layout Containers */
+    main {
+      flex: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 4rem;
+      width: 100%;
+    }
+
+    section {
+      margin-bottom: 4.5rem;
+      scroll-margin-top: 5rem;
+    }
+
+    .section-header {
+      margin-bottom: 1.25rem;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: var(--font-heading);
+      color: #ffffff;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    h2::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-color);
+      display: block;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      color: #f1f5f9;
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      max-width: 72ch;
+    }
+
+    p strong {
+      color: var(--text-main);
+    }
+
+    /* Hero Section */
+    .hero-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-title-group {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title {
+      font-size: 2.6rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.25rem;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-subtitle {
+      font-size: 1.05rem;
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      margin-bottom: 1.25rem;
+    }
+
+    /* Formula Banner */
+    .formula-card {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem 2rem;
+      font-family: var(--font-mono);
+      font-size: 1.6rem;
+      gap: 0.6rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .fn-f {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .fn-eq {
+      color: var(--text-dim);
+    }
+    .fn-g {
+      color: #10b981;
+      font-weight: 600;
+    }
+    .fn-plus {
+      color: var(--text-dim);
+    }
+    .fn-h {
+      color: #fbbf24;
+      font-weight: 600;
+    }
+    .fn-explain {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      margin-top: 0.5rem;
+      font-family: var(--font-body);
+    }
+
+    /* Visualizer Container */
+    .visualizer-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+      margin-top: 1.5rem;
+    }
+
+    /* Toolbar Controls */
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      background: var(--bg-panel-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 1rem;
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.5rem 0.9rem;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-main);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+      user-select: none;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: #1c2948;
+      border-color: var(--accent-cyan);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #0e374e;
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan-hover);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #154c6b;
+      border-color: #38bdf8;
+      color: #ffffff;
+    }
+
+    .btn-accent {
+      background: #312e81;
+      border-color: #6366f1;
+      color: #c7d2fe;
+    }
+
+    .btn-accent:hover:not(:disabled) {
+      background: #3730a3;
+      border-color: #818cf8;
+      color: #ffffff;
+    }
+
+    .btn-danger {
+      border-color: #7f1d1d;
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #450a0a;
+      border-color: #dc2626;
+    }
+
+    /* Form Inputs */
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .input-group label {
+      font-weight: 500;
+    }
+
+    select, input[type="range"], input[type="number"] {
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.4rem 0.6rem;
+      border-radius: 4px;
+      outline: none;
+    }
+
+    input[type="number"] {
+      font-family: var(--font-mono);
+      padding: 0.35rem 0.5rem;
+    }
+
+    select:focus, input[type="number"]:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .toggle-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .toggle-label input[type="checkbox"] {
+      accent-color: var(--accent-cyan);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+      height: 5px;
+      padding: 0;
+      background: #223258;
+    }
+
+    /* Collapsible Advanced Inputs Panel */
+    .advanced-panel {
+      margin-bottom: 1.25rem;
+      background: var(--bg-panel-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .advanced-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 1rem;
+      font-family: var(--font-heading);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      cursor: pointer;
+      user-select: none;
+      background: #0b1122;
+      transition: background-color 0.15s ease;
+    }
+
+    .advanced-summary:hover {
+      background: #101932;
+    }
+
+    .advanced-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .advanced-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .advanced-indicator {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .advanced-panel[open] .advanced-indicator {
+      color: var(--accent-cyan);
+    }
+
+    .advanced-body {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.15rem;
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(11, 17, 34, 0.6);
+    }
+
+    .advanced-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .advanced-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-family: var(--font-heading);
+    }
+
+    .advanced-controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Terrain Palette Buttons */
+    .palette-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    .palette-swatch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+
+    .palette-swatch:hover {
+      border-color: var(--accent-cyan);
+      color: var(--text-main);
+    }
+
+    .palette-swatch.active {
+      background: #142340;
+      border-color: var(--accent-cyan);
+      color: #ffffff;
+      box-shadow: 0 0 8px rgba(6, 182, 212, 0.3);
+    }
+
+    .swatch-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    /* Grid Area */
+    .grid-outer-wrapper {
+      position: relative;
+      width: 100%;
+      border: 2px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+      background: #060913;
+    }
+
+    .grid-container {
+      display: grid;
+      width: 100%;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .grid-cell {
+      border: 1px solid rgba(34, 50, 88, 0.45);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.12s ease;
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      line-height: 1.1;
+      padding: 1px;
+      overflow: hidden;
+    }
+
+    /* Grid Cell States */
+    .cell-empty {
+      background: transparent;
+    }
+
+    .cell-wall {
+      background: var(--color-wall) !important;
+      border-color: #12192e !important;
+      box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.9);
+    }
+
+    .cell-start {
+      background: var(--color-start) !important;
+      box-shadow: inset 0 0 8px var(--color-start-glow), 0 0 10px var(--color-start-glow);
+      cursor: grab !important;
+      z-index: 3;
+    }
+
+    .cell-start::after {
+      content: 'S';
+      font-weight: 700;
+      color: #032e1e;
+      font-size: 0.95rem;
+    }
+
+    .cell-goal {
+      background: var(--color-goal) !important;
+      box-shadow: inset 0 0 8px var(--color-goal-glow), 0 0 10px var(--color-goal-glow);
+      cursor: grab !important;
+      z-index: 3;
+    }
+
+    .cell-goal::after {
+      content: 'G';
+      font-weight: 700;
+      color: #3b0712;
+      font-size: 0.95rem;
+    }
+
+    /* Terrain Styles */
+    .cell-terrain-grass {
+      background-color: rgba(34, 197, 94, 0.2) !important;
+      border-color: rgba(34, 197, 94, 0.45) !important;
+    }
+
+    .cell-terrain-mud {
+      background-color: rgba(180, 83, 9, 0.28) !important;
+      border-color: rgba(180, 83, 9, 0.5) !important;
+    }
+
+    .cell-terrain-water {
+      background-color: rgba(37, 99, 235, 0.28) !important;
+      border-color: rgba(37, 99, 235, 0.5) !important;
+    }
+
+    /* Search frontiers */
+    .cell-open {
+      background: var(--color-open-bg);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+
+    .cell-closed {
+      background: var(--color-closed-bg);
+      border-color: rgba(99, 102, 241, 0.35);
+    }
+
+    .cell-path {
+      background: var(--color-path) !important;
+      box-shadow: 0 0 12px var(--color-path-glow), inset 0 0 4px #ffffff;
+      border-color: #67e8f9 !important;
+      z-index: 2;
+      animation: popPath 0.25s ease forwards;
+    }
+
+    /* Preserve terrain border color when searched */
+    .cell-terrain-grass.cell-open { background-color: rgba(245, 158, 11, 0.42) !important; border-color: #22c55e !important; }
+    .cell-terrain-grass.cell-closed { background-color: rgba(99, 102, 241, 0.42) !important; border-color: #22c55e !important; }
+    .cell-terrain-mud.cell-open { background-color: rgba(245, 158, 11, 0.42) !important; border-color: #f59e0b !important; }
+    .cell-terrain-mud.cell-closed { background-color: rgba(99, 102, 241, 0.42) !important; border-color: #f59e0b !important; }
+    .cell-terrain-water.cell-open { background-color: rgba(245, 158, 11, 0.42) !important; border-color: #3b82f6 !important; }
+    .cell-terrain-water.cell-closed { background-color: rgba(99, 102, 241, 0.42) !important; border-color: #3b82f6 !important; }
+
+    @keyframes popPath {
+      0% { transform: scale(0.7); }
+      100% { transform: scale(1); }
+    }
+
+    /* Mini F/G/H text inside cells */
+    .cell-metrics {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .show-metrics .cell-metrics {
+      display: flex;
+    }
+
+    .cell-metrics .m-f {
+      font-weight: 600;
+      color: #ffffff;
+      font-size: 0.62rem;
+    }
+    .cell-metrics .m-gh {
+      display: flex;
+      gap: 3px;
+      font-size: 0.48rem;
+    }
+    .cell-metrics .m-g {
+      color: #10b981;
+    }
+    .cell-metrics .m-h {
+      color: #fbbf24;
+    }
+    .cell-metrics .m-cost {
+      font-size: 0.46rem;
+      color: #a7f3d0;
+      font-weight: 600;
+      line-height: 1;
+      margin-top: 1px;
+    }
+
+    /* Color Legend */
+    .legend-panel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.25rem;
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .swatch-start { background: var(--color-start); }
+    .swatch-goal { background: var(--color-goal); }
+    .swatch-wall { background: var(--color-wall); border-color: #223258; }
+    .swatch-open { background: var(--color-open); }
+    .swatch-closed { background: var(--color-closed); }
+    .swatch-path { background: var(--color-path); }
+    .swatch-grass { background: rgba(34, 197, 94, 0.4); border-color: #22c55e; }
+    .swatch-mud { background: rgba(180, 83, 9, 0.5); border-color: #f59e0b; }
+    .swatch-water { background: rgba(37, 99, 235, 0.5); border-color: #3b82f6; }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.65rem 0.85rem;
+      font-family: var(--font-mono);
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      margin-top: 0.15rem;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      margin-top: 1rem;
+      padding: 0.65rem 1rem;
+      background: #090e1c;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      color: #93c5fd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-height: 2.5rem;
+    }
+
+    .status-text {
+      flex: 1;
+    }
+
+    /* Comparison Box (Side-by-side with Dijkstra) */
+    .compare-container {
+      margin-top: 1.5rem;
+      background: var(--bg-panel-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1.25rem;
+      display: none;
+    }
+
+    .compare-container.active {
+      display: block;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Content Panels & Cards */
+    .panel-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin: 1.25rem 0;
+    }
+
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1.25rem;
+    }
+
+    .card-accent-border {
+      border-left: 3px solid var(--accent-cyan);
+    }
+
+    .card-purple-border {
+      border-left: 3px solid #818cf8;
+    }
+
+    .card-amber-border {
+      border-left: 3px solid #fbbf24;
+    }
+
+    .card-green-border {
+      border-left: 3px solid #10b981;
+    }
+
+    /* Tables */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-panel);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    th {
+      background: #0e1628;
+      font-family: var(--font-heading);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(34, 50, 88, 0.15);
+    }
+
+    .mono-cell {
+      font-family: var(--font-mono);
+      color: var(--accent-cyan);
+    }
+
+    /* Ordered steps */
+    .steps-list {
+      list-style-position: outside;
+      margin-left: 1.25rem;
+      margin-top: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .steps-list li {
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .steps-list li strong {
+      color: #ffffff;
+    }
+
+    /* Pseudocode Block */
+    .code-container {
+      background: #080c16;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      line-height: 1.6;
+      margin: 1.25rem 0;
+    }
+
+    .code-container code {
+      display: block;
+      color: #cbd5e1;
+    }
+
+    /* Syntax Highlighting */
+    .kw { color: #f43f5e; font-weight: 600; } /* keywords */
+    .fn { color: #38bdf8; font-weight: 500; } /* function */
+    .cm { color: #64748b; font-style: italic; } /* comments */
+    .op { color: #fbbf24; } /* operators */
+    .num { color: #a78bfa; } /* numbers */
+    .str { color: #34d399; } /* strings/types */
+    .val { color: #38bdf8; }
+
+    /* Bullet Lists */
+    .bullet-list {
+      list-style: none;
+    }
+
+    .bullet-list li {
+      position: relative;
+      padding-left: 1.25rem;
+      margin-bottom: 0.6rem;
+      color: var(--text-muted);
+    }
+
+    .bullet-list li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--accent-cyan);
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .bullet-list-danger li::before {
+      color: #f43f5e;
+    }
+
+    /* Semantic Definition List for Applications */
+    .app-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.25rem;
+    }
+
+    .app-item {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1.25rem;
+      transition: border-color 0.2s ease;
+    }
+
+    .app-item:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .app-dt {
+      font-family: var(--font-heading);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .app-dd {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    /* Citations */
+    .reference-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .reference-item {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.85rem 1.15rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .reference-item strong {
+      color: #ffffff;
+    }
+
+    /* Footer */
+    footer {
+      background: #090d18;
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .footer-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 1.25rem;
+    }
+
+    .footer-project h4 {
+      color: #ffffff;
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .footer-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+
+    .footer-meta div span {
+      color: var(--accent-cyan);
+    }
+
+    .footer-bottom {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.8rem;
+    }
+
+    /* Accessibility / Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 1.9rem;
+      }
+      .formula-card {
+        font-size: 1.2rem;
+        padding: 0.5rem 1rem;
+      }
+      .controls-row, .advanced-controls-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .btn-group {
+        justify-content: stretch;
+      }
+      .btn {
+        flex: 1;
+        justify-content: center;
+      }
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .cell-metrics {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Academic Identity Band -->
+  <header class="top-identity-band">
+    <div class="identity-container">
+      <div class="identity-badge">
+        <strong>A* Search Algorithm</strong>
+        <span style="color: var(--border-color);">|</span>
+        <span>Design and Analysis of Algorithms &mdash; Course Project</span>
+      </div>
+      <div class="identity-items">
+        <div class="identity-item"><span class="label">Name:</span><span class="val">Sahil Wadekar</span></div>
+        <div class="identity-item"><span class="label">USN:</span><span class="val">CD24040</span></div>
+        <div class="identity-item"><span class="label">Course:</span><span class="val">Design and Analysis of Algorithms (DAA)</span></div>
+        <div class="identity-item"><span class="label">Semester:</span><span class="val">4th Semester, CSE</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sticky Navigation Bar -->
+  <nav class="sticky-nav" aria-label="Project Sections Navigation">
+    <div class="nav-inner">
+      <a href="#visualizer" class="nav-link">Interactive Visualizer</a>
+      <a href="#introduction" class="nav-link">Introduction</a>
+      <a href="#how-it-works" class="nav-link">How It Works</a>
+      <a href="#heuristics" class="nav-link">Heuristics &amp; Admissibility</a>
+      <a href="#pseudocode" class="nav-link">Pseudocode</a>
+      <a href="#comparison" class="nav-link">Algorithm Comparison</a>
+      <a href="#complexity" class="nav-link">Complexity Analysis</a>
+      <a href="#tradeoffs" class="nav-link">Advantages &amp; Limitations</a>
+      <a href="#applications" class="nav-link">Applications</a>
+      <a href="#references" class="nav-link">References</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main>
+
+    <!-- SECTION 1: HERO + INTERACTIVE VISUALIZER -->
+    <section id="visualizer" class="hero-section">
+      <div class="hero-title-group">
+        <h1 class="hero-title">A* Search Algorithm</h1>
+        <div class="hero-subtitle">Design and Analysis of Algorithms &mdash; Course Project</div>
+        
+        <!-- Formula Display -->
+        <div class="formula-card">
+          <span class="fn-f">f(n)</span>
+          <span class="fn-eq">=</span>
+          <span class="fn-g">g(n)</span>
+          <span class="fn-plus">+</span>
+          <span class="fn-h">h(n)</span>
+        </div>
+        <div class="fn-explain">
+          Estimated total cost = Known path cost from start + Estimated heuristic distance to goal
+        </div>
+      </div>
+
+      <!-- Visualizer Interface -->
+      <div class="visualizer-card">
+        
+        <!-- Main Controls Toolbar -->
+        <div class="controls-panel">
+          <div class="controls-row">
+            <div class="btn-group">
+              <button id="btnStart" class="btn btn-primary" title="Execute A* Search">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                Start search
+              </button>
+              <button id="btnPause" class="btn" disabled title="Pause or Resume animation">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                Pause
+              </button>
+              <button id="btnStep" class="btn" title="Advance search by one step">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                Step
+              </button>
+              <button id="btnResetPath" class="btn" title="Clear search path while keeping walls and terrain">Reset path</button>
+              <button id="btnClearGrid" class="btn btn-danger" title="Clear all walls, terrain, and search">Clear grid</button>
+              <button id="btnMaze" class="btn" title="Generate randomized obstacle maze">Random maze</button>
+              <button id="btnCompare" class="btn btn-accent" title="Run A* vs Dijkstra side-by-side benchmark">Compare with Dijkstra</button>
+            </div>
+          </div>
+
+          <div class="controls-row">
+            <div class="input-group">
+              <label for="selectHeuristic">Heuristic:</label>
+              <select id="selectHeuristic">
+                <option value="manhattan">Manhattan (dx + dy)</option>
+                <option value="euclidean">Euclidean (&radic;(dx&sup2; + dy&sup2;))</option>
+                <option value="diagonal">Diagonal (octile)</option>
+                <option value="none">None &mdash; h(n)=0</option>
+              </select>
+            </div>
+
+            <div class="btn-group">
+              <label class="toggle-label" title="Enable 8-directional movement with diagonal step cost &radic;2">
+                <input type="checkbox" id="chkDiagonal">
+                <span>Allow diagonal moves</span>
+              </label>
+
+              <label class="toggle-label" title="Display numeric f, g, h values inside explored cells">
+                <input type="checkbox" id="chkMetrics">
+                <span>Show g / h / f values</span>
+              </label>
+            </div>
+
+            <div class="speed-control">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Speed:</span>
+              <input type="range" id="sliderSpeed" min="1" max="20" value="8" title="Adjust animation speed">
+            </div>
+          </div>
+        </div>
+
+        <!-- Collapsible Advanced Input Panel (Closed by default) -->
+        <details id="advancedPanel" class="advanced-panel">
+          <summary class="advanced-summary">
+            <span class="advanced-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              Advanced inputs &amp; customization
+            </span>
+            <span class="advanced-indicator">Expand &or;</span>
+          </summary>
+          <div class="advanced-body">
+            
+            <!-- Feature 1: Manual Grid Size -->
+            <div class="advanced-group">
+              <div class="advanced-label">1. Manual Grid Dimensions (Rows &amp; Cols: 5 &ndash; 60):</div>
+              <div class="advanced-controls-row">
+                <div class="input-group">
+                  <label for="inputRows">Rows:</label>
+                  <input type="number" id="inputRows" min="5" max="60" value="15" style="width: 68px;">
+                </div>
+                <div class="input-group">
+                  <label for="inputCols">Cols:</label>
+                  <input type="number" id="inputCols" min="5" max="60" value="25" style="width: 68px;">
+                </div>
+                <button id="btnApplyGridSize" class="btn btn-primary" title="Rebuild grid to custom dimensions">Apply size</button>
+              </div>
+            </div>
+
+            <!-- Feature 2: Paint Mode & Weighted Terrain Palette -->
+            <div class="advanced-group">
+              <div class="advanced-label">2. Paint Mode &amp; Terrain Palette (select swatch, then click &amp; drag on grid):</div>
+              <div class="palette-bar">
+                <button type="button" class="palette-swatch active" data-tool="wall" title="Impassable obstacle">
+                  <span class="swatch-indicator" style="background: #060913; border: 1px solid #223258;"></span>
+                  <span>Wall (&infin;)</span>
+                </button>
+                <button type="button" class="palette-swatch" data-tool="terrain" data-cost="1" title="Neutral traversable path">
+                  <span class="swatch-indicator" style="background: #0e1526; border: 1px solid rgba(255,255,255,0.2);"></span>
+                  <span>Path (1&times;)</span>
+                </button>
+                <button type="button" class="palette-swatch" data-tool="terrain" data-cost="2" title="Light resistance grass">
+                  <span class="swatch-indicator" style="background: rgba(34, 197, 94, 0.4); border: 1px solid #22c55e;"></span>
+                  <span>Grass (2&times;)</span>
+                </button>
+                <button type="button" class="palette-swatch" data-tool="terrain" data-cost="4" title="Medium resistance mud">
+                  <span class="swatch-indicator" style="background: rgba(180, 83, 9, 0.5); border: 1px solid #f59e0b;"></span>
+                  <span>Mud (4&times;)</span>
+                </button>
+                <button type="button" class="palette-swatch" data-tool="terrain" data-cost="8" title="Heavy resistance water">
+                  <span class="swatch-indicator" style="background: rgba(37, 99, 235, 0.5); border: 1px solid #3b82f6;"></span>
+                  <span>Water (8&times;)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Feature 3: Coordinate Input for Start & Goal -->
+            <div class="advanced-group">
+              <div class="advanced-label">3. Coordinate Input (X = Col, Y = Row &bull; live synced with drag):</div>
+              <div class="advanced-controls-row">
+                <div class="input-group">
+                  <span style="color: #10b981; font-weight: 600;">Start:</span>
+                  <label for="inpStartX">X</label>
+                  <input type="number" id="inpStartX" min="0" max="24" value="4" style="width: 55px;">
+                  <label for="inpStartY">Y</label>
+                  <input type="number" id="inpStartY" min="0" max="14" value="7" style="width: 55px;">
+                </div>
+                <div class="input-group">
+                  <span style="color: #ec4899; font-weight: 600;">Goal:</span>
+                  <label for="inpGoalX">X</label>
+                  <input type="number" id="inpGoalX" min="0" max="24" value="20" style="width: 55px;">
+                  <label for="inpGoalY">Y</label>
+                  <input type="number" id="inpGoalY" min="0" max="14" value="7" style="width: 55px;">
+                </div>
+                <button id="btnSetCoords" class="btn" title="Update start and goal to coordinates">Set</button>
+              </div>
+            </div>
+
+            <!-- Feature 4: Import / Export Maze -->
+            <div class="advanced-group">
+              <div class="advanced-label">4. Import / Export Maze:</div>
+              <div class="advanced-controls-row">
+                <button id="btnExportMaze" class="btn" title="Download current maze and terrain as JSON">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                  Export maze
+                </button>
+                <button id="btnImportMaze" class="btn" title="Load maze and terrain from JSON file">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                  Import maze
+                </button>
+                <input type="file" id="fileImportMaze" accept=".json" style="display: none;">
+              </div>
+            </div>
+
+          </div>
+        </details>
+
+        <!-- Interactive Grid Area -->
+        <div class="grid-outer-wrapper">
+          <div id="grid" class="grid-container" role="region" aria-label="A* search pathfinding grid"></div>
+        </div>
+
+        <!-- Legend Panel -->
+        <div class="legend-panel">
+          <div class="legend-item"><span class="legend-swatch swatch-start"></span> Start Node (Green)</div>
+          <div class="legend-item"><span class="legend-swatch swatch-goal"></span> Goal Node (Pink)</div>
+          <div class="legend-item"><span class="legend-swatch swatch-wall"></span> Wall (Near-Black)</div>
+          <div class="legend-item"><span class="legend-swatch swatch-open"></span> Open List / Frontier (Amber)</div>
+          <div class="legend-item"><span class="legend-swatch swatch-closed"></span> Closed List / Visited (Muted Indigo)</div>
+          <div class="legend-item"><span class="legend-swatch swatch-path"></span> Final Path (Cyan)</div>
+          <div class="legend-item"><span class="legend-swatch swatch-grass"></span> Grass (Cost 2&times;)</div>
+          <div class="legend-item"><span class="legend-swatch swatch-mud"></span> Mud (Cost 4&times;)</div>
+          <div class="legend-item"><span class="legend-swatch swatch-water"></span> Water (Cost 8&times;)</div>
+        </div>
+
+        <!-- Live Statistics Row -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Nodes Visited</div>
+            <div id="statVisited" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Nodes Queued</div>
+            <div id="statQueued" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Path Length</div>
+            <div id="statLength" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Path Cost</div>
+            <div id="statCost" class="stat-value">0.00</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Compute Time</div>
+            <div id="statTime" class="stat-value">0.0 ms</div>
+          </div>
+        </div>
+
+        <!-- Real-time Status Reporting -->
+        <div class="status-bar">
+          <span id="statusText" class="status-text">Click and drag to draw walls or terrain. Drag start or goal to reposition.</span>
+        </div>
+
+        <!-- Compare with Dijkstra Side-by-Side Panel -->
+        <div id="comparePanel" class="compare-container">
+          <h3 style="color: var(--accent-cyan);">A* vs Dijkstra Benchmark Comparison</h3>
+          <p style="font-size: 0.85rem; margin-bottom: 0.75rem;">
+            Both algorithms were executed on the identical grid, obstacles, and terrain weights. Dijkstra's algorithm corresponds to A* using the zero heuristic \(h(n) = 0\).
+          </p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Algorithm</th>
+                  <th>Heuristic Mode</th>
+                  <th>Nodes Visited</th>
+                  <th>Nodes Queued</th>
+                  <th>Path Length</th>
+                  <th>Path Cost</th>
+                  <th>Compute Time</th>
+                </tr>
+              </thead>
+              <tbody id="compareTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+          <div id="compareSummary" style="font-family: var(--font-mono); font-size: 0.84rem; color: #a5f3fc; margin-top: 0.5rem;"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 2: INTRODUCTION -->
+    <section id="introduction">
+      <div class="section-header">
+        <h2>Introduction</h2>
+      </div>
+      <p>
+        The <strong>A* Search Algorithm</strong> is one of the most widely used and influential graph traversal and pathfinding algorithms in computer science. Formulated in 1968 by <strong>Peter Hart, Nils Nilsson, and Bertram Raphael</strong> (Hart–Nilsson–Raphael 1968) at the Stanford Research Institute (SRI), A* was originally developed to give the Shakey the Robot mobile platform the ability to plan navigable paths through structured physical environments.
+      </p>
+      <p>
+        A* directly <strong>extends Dijkstra's algorithm by adding a directional hint</strong> in the form of a heuristic function. While Dijkstra's algorithm explores outward uniformly in all directions—forming an expanding circle or sphere of explored nodes—A* uses the heuristic estimate to actively bias its frontier toward the destination, drastically reducing the search space while preserving provable optimality.
+      </p>
+      <p>
+        Today, A* is the primary algorithm used for autonomous navigation in robotics, video game non-player character (NPC) pathfinding, road-network routing in mapping engines, telecommunications packet routing, and automated combinatorial planning.
+      </p>
+    </section>
+
+    <!-- SECTION 3: HOW IT WORKS -->
+    <section id="how-it-works">
+      <div class="section-header">
+        <h2>How It Works</h2>
+      </div>
+      <p>
+        At each step, A* selects the node \(n\) from its priority queue that minimizes the total evaluation function:
+      </p>
+      
+      <div class="panel-grid-2">
+        <div class="card card-green-border">
+          <h3 style="color: #10b981;">g(n) &mdash; Known Measured Cost So Far</h3>
+          <p style="margin-bottom: 0;">
+            The exact, known measured cost accumulated along the best-known path from the start node to node \(n\). In a grid with orthogonal moves, each step adds \(1.0 \times \text{cost}\); diagonal moves add \(\sqrt{2} \times \text{cost}\).
+          </p>
+        </div>
+        <div class="card card-amber-border">
+          <h3 style="color: #fbbf24;">h(n) &mdash; Estimated Cost Remaining</h3>
+          <p style="margin-bottom: 0;">
+            The heuristic estimate of the remaining cost from node \(n\) to the final goal node. This directional estimate guides the search directly towards the target without wasting expansions on unpromising branches.
+          </p>
+        </div>
+      </div>
+
+      <p>
+        A* maintains two core data structures throughout its execution:
+      </p>
+      <ul class="bullet-list" style="margin-bottom: 1.5rem;">
+        <li><strong>Open List (Frontier):</strong> A priority queue containing all discovered candidate nodes awaiting evaluation, keyed primarily by lowest \(f(n)\) score.</li>
+        <li><strong>Closed List (Explored Set):</strong> A set of nodes that have already been expanded and finalized, preventing redundant processing and infinite loops.</li>
+      </ul>
+
+      <h3>One Full Iteration Walkthrough</h3>
+      <ol class="steps-list">
+        <li><strong>Pop Lowest f:</strong> Extract the node \(n\) with the minimum \(f(n) = g(n) + h(n)\) from the open list. Tie-break on lower \(h(n)\) to favor nodes closer to the destination.</li>
+        <li><strong>Check Goal:</strong> If node \(n\) is the goal node, reconstruct the optimal path by tracing parent pointers backwards from the goal to the start and terminate successfully.</li>
+        <li><strong>Move to Closed:</strong> Add node \(n\) to the closed list so that it will never be expanded again.</li>
+        <li><strong>Relax Each Neighbour:</strong> For every valid, unblocked neighbour \(m\) of \(n\):
+          <ul style="margin: 0.4rem 0 0 1.25rem; list-style-type: circle;">
+            <li>Calculate tentative cost: \(g_{\text{tentative}} = g(n) + \text{cost}(n, m)\).</li>
+            <li>If \(m\) is already in the closed list and \(g_{\text{tentative}} \ge g(m)\), skip it.</li>
+            <li>If \(g_{\text{tentative}} < g(m)\), record \(n\) as the parent of \(m\), update \(g(m) = g_{\text{tentative}}\), compute \(f(m) = g(m) + h(m)\), and insert or update \(m\) in the open list.</li>
+          </ul>
+        </li>
+        <li><strong>Repeat or Fail:</strong> Repeat until the goal is reached, or the open list empties. If the open list empties before reaching the goal, no traversable path exists.</li>
+      </ol>
+    </section>
+
+    <!-- SECTION 4: HEURISTICS -->
+    <section id="heuristics">
+      <div class="section-header">
+        <h2>Heuristics &amp; Admissibility</h2>
+      </div>
+      <p>
+        The heuristic function \(h(n)\) encodes domain-specific geometric knowledge to steer search expansions. The table below outlines standard heuristics and their appropriate contexts:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Heuristic</th>
+              <th>Mathematical Formula</th>
+              <th>Allowed Directions</th>
+              <th>When Each Applies</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Manhattan Distance</strong></td>
+              <td class="mono-cell">dx + dy</td>
+              <td>4 Directions (Orthogonal)</td>
+              <td>Grid movement restricted to 4 cardinal directions (no diagonal movement).</td>
+            </tr>
+            <tr>
+              <td><strong>Euclidean Distance</strong></td>
+              <td class="mono-cell">&radic;(dx&sup2; + dy&sup2;)</td>
+              <td>Continuous / Any-Angle</td>
+              <td>Straight-line Euclidean distance in continuous 2D/3D space or unconstrained motion.</td>
+            </tr>
+            <tr>
+              <td><strong>Diagonal / Octile</strong></td>
+              <td class="mono-cell">(dx + dy) + (&radic;2 - 2) &middot; min(dx, dy)</td>
+              <td>8 Directions (Orthogonal + Diag)</td>
+              <td>Grid allowing diagonal steps costing &radic;2. Accurately reflects true shortest grid movement.</td>
+            </tr>
+            <tr>
+              <td><strong>Zero Heuristic</strong></td>
+              <td class="mono-cell">h(n) = 0</td>
+              <td>Any Topology</td>
+              <td>Uninformed uniform-cost search. Degenerates A* exactly into Dijkstra's Algorithm.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel-grid-2">
+        <div class="card card-accent-border">
+          <h3 style="color: var(--accent-cyan);">Admissibility</h3>
+          <p style="font-family: var(--font-mono); font-size: 0.88rem; color: #38bdf8; margin-bottom: 0.5rem;">
+            h(n) &le; h*(n) &nbsp;&forall; n
+          </p>
+          <p style="font-size: 0.88rem; margin-bottom: 0;">
+            A heuristic is <strong>admissible</strong> if it never overestimates the true minimal cost \(h^*(n)\) to reach the goal from node \(n\). Admissibility is the critical condition that <strong>guarantees optimality</strong>: if \(h(n)\) never overestimates, A* will always return a provably shortest path. When weighted terrain is added with costs \(\ge 1.0\), standard distance heuristics remain strictly admissible.
+          </p>
+        </div>
+
+        <div class="card card-purple-border">
+          <h3 style="color: #a78bfa;">Consistency (Monotonicity)</h3>
+          <p style="font-family: var(--font-mono); font-size: 0.88rem; color: #c084fc; margin-bottom: 0.5rem;">
+            h(n) &le; cost(n, m) + h(m) &nbsp;&forall; edges (n, m)
+          </p>
+          <p style="font-size: 0.88rem; margin-bottom: 0;">
+            A heuristic is <strong>consistent</strong> (or monotonic) if it satisfies the triangle inequality. Consistency is a stronger condition than admissibility: it guarantees that whenever A* extracts a node from the open list, the shortest path to that node has already been found. Consequently, <strong>nodes never need reopening</strong> from the closed list.
+          </p>
+        </div>
+      </div>
+
+      <div class="card card-amber-border" style="margin-top: 1.25rem;">
+        <h3 style="color: #fbbf24;">Inadmissibility Verification in the Interactive Demo</h3>
+        <p style="font-size: 0.88rem; margin-bottom: 0;">
+          <strong>Interactive Experiment:</strong> In the visualizer above, check the <em>"Allow diagonal moves"</em> box while keeping the heuristic dropdown set to <em>"Manhattan"</em>. On an 8-directional grid, a diagonal move has cost \(\sqrt{2} \approx 1.414\), but Manhattan distance estimates that same displacement as \(1 + 1 = 2.0\). Because \(2.0 > 1.414\), Manhattan <em>overestimates</em> the cost remaining, violating admissibility. As you can observe in the demo, A* becomes overly greedy and can return a path that is not the true geometric shortest path.
+        </p>
+      </div>
+    </section>
+
+    <!-- SECTION 5: PSEUDOCODE -->
+    <section id="pseudocode">
+      <div class="section-header">
+        <h2>Pseudocode</h2>
+      </div>
+      <p>
+        The complete, standard specification of the A* algorithm and its path reconstruction subroutine:
+      </p>
+
+      <div class="code-container">
+<code><span class="kw">function</span> <span class="fn">A_STAR</span>(start, goal, h):
+    <span class="cm">// Initialize priority queue (min-heap) ordered by f-score, tie-broken on lower h-score</span>
+    openSet = <span class="kw">new</span> <span class="str">MinPriorityQueue</span>()
+    openSet.<span class="fn">insert</span>(start, priority=h(start))
+    
+    <span class="cm">// Track best known cost from start to each node</span>
+    gScore = <span class="kw">new</span> <span class="str">Map</span>(default=&infin;)
+    gScore[start] = <span class="num">0</span>
+    
+    <span class="cm">// Track parent pointers for path reconstruction</span>
+    cameFrom = <span class="kw">new</span> <span class="str">Map</span>()
+    closedSet = <span class="kw">new</span> <span class="str">Set</span>()
+
+    <span class="kw">while</span> <span class="kw">not</span> openSet.<span class="fn">isEmpty</span>():
+        current = openSet.<span class="fn">extractMin</span>()
+        
+        <span class="cm">// Skip stale heap entries</span>
+        <span class="kw">if</span> current <span class="kw">in</span> closedSet:
+            <span class="kw">continue</span>
+
+        <span class="cm">// Target reached: reconstruct and return optimal path</span>
+        <span class="kw">if</span> current == goal:
+            <span class="kw">return</span> <span class="fn">RECONSTRUCT_PATH</span>(cameFrom, current)
+
+        closedSet.<span class="fn">add</span>(current)
+
+        <span class="kw">for each</span> neighbor <span class="kw">in</span> <span class="fn">NEIGHBORS</span>(current):
+            <span class="kw">if</span> neighbor <span class="kw">in</span> closedSet:
+                <span class="kw">continue</span>
+                
+            tentative_g = gScore[current] + <span class="fn">COST</span>(current, neighbor)
+
+            <span class="kw">if</span> tentative_g &lt; gScore[neighbor]:
+                cameFrom[neighbor] = current
+                gScore[neighbor] = tentative_g
+                fScore = tentative_g + <span class="fn">h</span>(neighbor, goal)
+                openSet.<span class="fn">insert</span>(neighbor, priority=fScore)
+
+    <span class="kw">return</span> <span class="val">FAILURE</span> <span class="cm">// Goal unreachable</span>
+
+<span class="kw">function</span> <span class="fn">RECONSTRUCT_PATH</span>(cameFrom, current):
+    path = [current]
+    <span class="kw">while</span> current <span class="kw">in</span> cameFrom:
+        current = cameFrom[current]
+        path.<span class="fn">prepend</span>(current)
+    <span class="kw">return</span> path</code>
+      </div>
+
+      <div class="card" style="background: var(--bg-card); border-left: 3px solid var(--accent-cyan); font-size: 0.88rem;">
+        <strong>Binary Heap Implementation &amp; Complexity Impact:</strong> In this application, the open list is implemented as a true <strong>Binary Min-Heap</strong> class rather than an array that gets re-sorted. A naive array sort takes \(\mathcal{O}(V \log V)\) per iteration, resulting in an overall runtime of \(\mathcal{O}(V^2 \log V)\). In contrast, our binary min-heap guarantees \(\mathcal{O}(\log V)\) push and extract-min operations, which is essential to substantiate the theoretical \(\mathcal{O}(E \log V)\) complexity claim of the algorithm.
+      </div>
+    </section>
+
+    <!-- SECTION 6: COMPARISON TABLE -->
+    <section id="comparison">
+      <div class="section-header">
+        <h2>Algorithm Comparison</h2>
+      </div>
+      <p>
+        A comparative breakdown of standard search and traversal algorithms studied in Design and Analysis of Algorithms:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Algorithm</th>
+              <th>What it expands by</th>
+              <th>Complete?</th>
+              <th>Optimal?</th>
+              <th>Typical speed</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>A* Search</strong></td>
+              <td class="mono-cell">f(n) = g(n) + h(n)</td>
+              <td>Yes (with positive edge costs)</td>
+              <td>Yes (with admissible h)</td>
+              <td>Fastest optimal; highly focused towards goal.</td>
+            </tr>
+            <tr>
+              <td><strong>Dijkstra's Algorithm</strong></td>
+              <td class="mono-cell">f(n) = g(n) &nbsp;[h(n) = 0]</td>
+              <td>Yes</td>
+              <td>Yes</td>
+              <td>Slow on large graphs; expands uniformly in circles.</td>
+            </tr>
+            <tr>
+              <td><strong>Greedy Best-First</strong></td>
+              <td class="mono-cell">f(n) = h(n) &nbsp;[g(n) = 0]</td>
+              <td>No (can loop in infinite graphs)</td>
+              <td>No</td>
+              <td>Very fast, but easily trapped by obstacles and produces suboptimal paths.</td>
+            </tr>
+            <tr>
+              <td><strong>Breadth-First Search (BFS)</strong></td>
+              <td class="mono-cell">f(n) = depth(n)</td>
+              <td>Yes</td>
+              <td>Yes (unweighted graphs only)</td>
+              <td>Layer-by-layer expansion; unsuited for weighted maps.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        <strong>A* as the General Case:</strong> A* represents the unified, generalized framework of best-first search. Setting the heuristic to zero (\(h(n) = 0\)) yields Dijkstra's algorithm, which computes exact shortest paths with no forward guidance. Conversely, dropping the known path cost (\(g(n) = 0\)) gives Greedy Best-First search, which rushes headlong toward the destination while ignoring cumulative distance. A* synthesizes the strengths of both: the provable optimality of Dijkstra combined with the directed search speed of Greedy Best-First.
+      </p>
+    </section>
+
+    <!-- SECTION 7: COMPLEXITY ANALYSIS -->
+    <section id="complexity">
+      <div class="section-header">
+        <h2>Complexity Analysis</h2>
+      </div>
+      <p>
+        The theoretical and practical performance analysis of A* depends heavily on graph topology and heuristic accuracy:
+      </p>
+
+      <div class="panel-grid-2">
+        <div class="card card-accent-border">
+          <h3 style="color: var(--accent-cyan);">Time Complexity</h3>
+          <p style="font-family: var(--font-mono); font-size: 0.95rem; color: #38bdf8;">
+            Worst Case: \(\mathcal{O}(b^d)\) &nbsp;|&nbsp; Graph: \(\mathcal{O}(E \log V)\)
+          </p>
+          <p style="font-size: 0.88rem; margin-bottom: 0;">
+            In the worst-case scenario (with an uninformative or zero heuristic), A* must explore all nodes within radius \(d\) with branching factor \(b\), resulting in \(\mathcal{O}(b^d)\) operations. On an explicit graph of \(V\) vertices and \(E\) edges using a binary min-heap, the runtime is strictly bounded by \(\mathcal{O}(E \log V)\).
+          </p>
+        </div>
+
+        <div class="card card-purple-border">
+          <h3 style="color: #a78bfa;">Space Complexity &amp; The True Bottleneck</h3>
+          <p style="font-family: var(--font-mono); font-size: 0.95rem; color: #c084fc;">
+            Space Complexity: \(\mathcal{O}(b^d)\)
+          </p>
+          <p style="font-size: 0.88rem; margin-bottom: 0;">
+            A* must keep all generated candidate nodes in memory (in either the open list or closed list) to prevent cyclic visits and guarantee optimality. Because memory requirements grow exponentially with solution depth \(d\), <strong>space is the true practical bottleneck</strong> of A* in real-world applications—available RAM is virtually always exhausted before CPU time.
+          </p>
+        </div>
+      </div>
+
+      <div class="panel-grid-2" style="margin-top: 1.25rem;">
+        <div class="card">
+          <h3 style="font-size: 1.05rem;">Sharper Bound with Heuristic Error</h3>
+          <p style="font-size: 0.88rem; margin-bottom: 0;">
+            When the heuristic has a bounded relative error \(\varepsilon = \frac{|h^*(n) - h(n)|}{h^*(n)}\), the effective time complexity sharpens from \(\mathcal{O}(b^d)\) down to \(\mathcal{O}(b^{\varepsilon d})\). In the ideal case where \(\varepsilon \to 0\), node expansions collapse from exponential growth down to linear runtime \(\mathcal{O}(d)\).
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size: 1.05rem;">Heuristic Dominance Theorem</h3>
+          <p style="font-size: 0.88rem; margin-bottom: 0;">
+            If two admissible heuristics satisfy \(h_2(n) \ge h_1(n)\) for all nodes \(n\), then \(h_2\) is said to <strong>dominate</strong> \(h_1\). A* running with \(h_2\) will <em>never expand more nodes</em> than A* running with \(h_1\). This explains why octile distance strictly dominates Euclidean distance on an 8-direction grid.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 8: ADVANTAGES & LIMITATIONS -->
+    <section id="tradeoffs">
+      <div class="section-header">
+        <h2>Advantages &amp; Limitations</h2>
+      </div>
+
+      <div class="panel-grid-2">
+        <div class="card card-green-border">
+          <h3 style="color: #10b981;">Advantages</h3>
+          <ul class="bullet-list">
+            <li><strong>Guaranteed Optimality:</strong> Provably finds the minimal cost shortest path whenever an admissible heuristic is used.</li>
+            <li><strong>Complete:</strong> Guaranteed to terminate with a valid solution if one exists on any finite graph with positive edge weights.</li>
+            <li><strong>Optimally Efficient:</strong> Expands the absolute minimum number of nodes required by any optimal search algorithm operating with the same heuristic.</li>
+            <li><strong>Adaptable &amp; Configurable:</strong> Easily tuned between exhaustive certainty and fast greedy performance by adjusting the heuristic function.</li>
+            <li><strong>Domain Independence:</strong> Operates identically across uniform grids, road network graphs, robotic configuration spaces, and abstract game trees.</li>
+          </ul>
+        </div>
+
+        <div class="card card-accent-border" style="border-left-color: #f43f5e;">
+          <h3 style="color: #f43f5e;">Limitations</h3>
+          <ul class="bullet-list bullet-list-danger">
+            <li><strong>Memory Bottleneck:</strong> Exponential space complexity (\(\mathcal{O}(b^d)\)) exhausts RAM quickly on deep search horizons, necessitating variants like IDA* or SMA*.</li>
+            <li><strong>Inadmissibility Forfeiting Optimality:</strong> Any heuristic that overestimates true cost forfeits the mathematical guarantee of returning the shortest path.</li>
+            <li><strong>Heuristic Dependency:</strong> Designing an admissible, consistent, and computationally inexpensive heuristic requires substantial domain-specific engineering.</li>
+            <li><strong>Dynamic Environments Need D* Lite:</strong> In worlds where obstacles move or edge costs change dynamically, standard A* must recompute paths from scratch, requiring incremental algorithms like D* Lite or LPA*.</li>
+            <li><strong>Non-Negative Edge Weight Requirement:</strong> Fails on graphs containing negative edge weights or negative cost cycles (where algorithms like Bellman-Ford are required).</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 9: APPLICATIONS -->
+    <section id="applications">
+      <div class="section-header">
+        <h2>Applications</h2>
+      </div>
+      <p>
+        A* is utilized across diverse computing disciplines to resolve real-time spatial and combinatorial navigation problems:
+      </p>
+
+      <dl class="app-list">
+        <div class="app-item">
+          <dt class="app-dt">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4m-2-2v4m10-2h.01m-4 0h.01"/></svg>
+            Game AI Pathfinding
+          </dt>
+          <dd class="app-dd">
+            Navigates non-player characters (NPCs) around terrain obstacles and dynamic map geometry in real-time video games.
+          </dd>
+        </div>
+
+        <div class="app-item">
+          <dt class="app-dt">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
+            Road-Network Routing
+          </dt>
+          <dd class="app-dd">
+            Calculates optimal driving directions and turn-by-turn navigation in GPS mapping systems like Google Maps.
+          </dd>
+        </div>
+
+        <div class="app-item">
+          <dt class="app-dt">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
+            Robot Motion Planning
+          </dt>
+          <dd class="app-dd">
+            Determines collision-free trajectories for autonomous warehouse robots and industrial robotic arms in physical configuration spaces.
+          </dd>
+        </div>
+
+        <div class="app-item">
+          <dt class="app-dt">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+            8/15-Puzzle
+          </dt>
+          <dd class="app-dd">
+            Solves sliding tile puzzles by modeling board configurations as state-space nodes guided by Manhattan distance heuristics.
+          </dd>
+        </div>
+
+        <div class="app-item">
+          <dt class="app-dt">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3m0 0l7-7 3 3-7 7m-3-3l3 3"/></svg>
+            Sequence Alignment
+          </dt>
+          <dd class="app-dd">
+            Computes optimal pairwise and multiple sequence alignments of DNA, RNA, and protein sequences against biological scoring matrices.
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- SECTION 10: REFERENCES -->
+    <section id="references">
+      <div class="section-header">
+        <h2>References</h2>
+      </div>
+      <ul class="reference-list">
+        <li class="reference-item">
+          <strong>Hart, P. E., Nilsson, N. J., &amp; Raphael, B. (1968).</strong> "A Formal Basis for the Heuristic Determination of Minimum Cost Paths." <em>IEEE Transactions on Systems Science and Cybernetics</em>, 4(2), 100–107.
+        </li>
+        <li class="reference-item">
+          <strong>Russell, S., &amp; Norvig, P. (2020).</strong> <em>Artificial Intelligence: A Modern Approach</em> (4th ed.). Pearson. Chapter 3: "Solving Problems by Searching."
+        </li>
+        <li class="reference-item">
+          <strong>Cormen, T. H., Leiserson, C. E., Rivest, R. L., &amp; Stein, C. (2022).</strong> <em>Introduction to Algorithms</em> (4th ed.). MIT Press. Section 24.3: "Dijkstra's Algorithm."
+        </li>
+        <li class="reference-item">
+          <strong>Dijkstra, E. W. (1959).</strong> "A note on two problems in connexion with graphs." <em>Numerische Mathematik</em>, 1(1), 269–271.
+        </li>
+      </ul>
+    </section>
+
+  </main>
+
+  <!-- Footer with Academic Details -->
+  <footer>
+    <div class="footer-content">
+      <div class="footer-top">
+        <div class="footer-project">
+          <h4>A* Search Algorithm</h4>
+          <p style="font-size: 0.8rem; margin-bottom: 0;">Design and Analysis of Algorithms &mdash; Course Project</p>
+        </div>
+        <div class="footer-meta">
+          <div>Name: <span>Sahil Wadekar</span></div>
+          <div>USN: <span>CD24040</span></div>
+          <div>Course: <span>Design and Analysis of Algorithms (DAA)</span></div>
+          <div>Semester: <span>4th Semester, CSE</span></div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>Self-contained Single Page Application &mdash; Pure Vanilla JavaScript, HTML5 &amp; CSS3.</div>
+        <div style="font-family: var(--font-mono); color: var(--text-dim);">&copy; 2026 Sahil Wadekar &bull; CD24040</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- VANILLA JAVASCRIPT: ALGORITHM, MIN-HEAP & VISUALIZER ENGINE -->
+  <script>
+    /* ==========================================================================
+       1. BINARY MIN-HEAP IMPLEMENTATION
+       ==========================================================================
+       Order by f(n), tie-break on lower h(n).
+       Provides guaranteed O(log V) push and pop operations, essential for
+       meeting the theoretical complexity bounds of the A* algorithm.
+       ========================================================================== */
+    class MinHeap {
+      constructor() {
+        this.heap = [];
+      }
+
+      push(item) {
+        this.heap.push(item);
+        this._bubbleUp(this.heap.length - 1);
+      }
+
+      pop() {
+        if (this.heap.length === 0) return null;
+        const top = this.heap[0];
+        const bottom = this.heap.pop();
+        if (this.heap.length > 0) {
+          this.heap[0] = bottom;
+          this._sinkDown(0);
+        }
+        return top;
+      }
+
+      isEmpty() {
+        return this.heap.length === 0;
+      }
+
+      clear() {
+        this.heap = [];
+      }
+
+      _compare(a, b) {
+        // Primary sort on f-score
+        const diff = a.f - b.f;
+        if (Math.abs(diff) > 1e-7) {
+          return diff;
+        }
+        // Secondary tie-breaker on lower h-score (closer to goal)
+        return a.h - b.h;
+      }
+
+      _bubbleUp(idx) {
+        while (idx > 0) {
+          const parentIdx = (idx - 1) >> 1;
+          if (this._compare(this.heap[idx], this.heap[parentIdx]) < 0) {
+            const tmp = this.heap[idx];
+            this.heap[idx] = this.heap[parentIdx];
+            this.heap[parentIdx] = tmp;
+            idx = parentIdx;
+          } else {
+            break;
+          }
+        }
+      }
+
+      _sinkDown(idx) {
+        const len = this.heap.length;
+        while (true) {
+          let smallest = idx;
+          const left = (idx << 1) + 1;
+          const right = left + 1;
+
+          if (left < len && this._compare(this.heap[left], this.heap[smallest]) < 0) {
+            smallest = left;
+          }
+          if (right < len && this._compare(this.heap[right], this.heap[smallest]) < 0) {
+            smallest = right;
+          }
+
+          if (smallest !== idx) {
+            const tmp = this.heap[idx];
+            this.heap[idx] = this.heap[smallest];
+            this.heap[smallest] = tmp;
+            idx = smallest;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
+    /* ==========================================================================
+       2. GRID SETUP & STATE (DYNAMIC RESIZING & WEIGHTED TERRAIN)
+       ========================================================================== */
+    let COLS = 25;
+    let ROWS = 15;
+    let TOTAL_CELLS = COLS * ROWS;
+    const SQRT_2 = Math.SQRT2; // ~1.41421356
+
+    // Event Kind Constants
+    const EVENT_QUEUED = 1;
+    const EVENT_EXPANDED = 2;
+
+    let startIdx = 7 * COLS + 4;   // (r: 7, c: 4)
+    let goalIdx  = 7 * COLS + 20;  // (r: 7, c: 20)
+
+    // Grid Data Structures
+    let walls = new Uint8Array(TOTAL_CELLS);
+    let terrainCosts = new Float64Array(TOTAL_CELLS).fill(1.0);
+
+    // Active Paint Tool
+    let currentPaintTool = 'wall'; // 'wall' or 'terrain'
+    let currentTerrainCost = 1.0;
+
+    // DOM Elements - Main Controls
+    const gridEl = document.getElementById('grid');
+    const btnStart = document.getElementById('btnStart');
+    const btnPause = document.getElementById('btnPause');
+    const btnStep = document.getElementById('btnStep');
+    const btnResetPath = document.getElementById('btnResetPath');
+    const btnClearGrid = document.getElementById('btnClearGrid');
+    const btnMaze = document.getElementById('btnMaze');
+    const btnCompare = document.getElementById('btnCompare');
+    const selectHeuristic = document.getElementById('selectHeuristic');
+    const chkDiagonal = document.getElementById('chkDiagonal');
+    const chkMetrics = document.getElementById('chkMetrics');
+    const sliderSpeed = document.getElementById('sliderSpeed');
+
+    const statVisited = document.getElementById('statVisited');
+    const statQueued = document.getElementById('statQueued');
+    const statLength = document.getElementById('statLength');
+    const statCost = document.getElementById('statCost');
+    const statTime = document.getElementById('statTime');
+    const statusText = document.getElementById('statusText');
+
+    const comparePanel = document.getElementById('comparePanel');
+    const compareTableBody = document.getElementById('compareTableBody');
+    const compareSummary = document.getElementById('compareSummary');
+
+    // DOM Elements - Advanced Panel
+    const inputRows = document.getElementById('inputRows');
+    const inputCols = document.getElementById('inputCols');
+    const btnApplyGridSize = document.getElementById('btnApplyGridSize');
+
+    const inpStartX = document.getElementById('inpStartX');
+    const inpStartY = document.getElementById('inpStartY');
+    const inpGoalX = document.getElementById('inpGoalX');
+    const inpGoalY = document.getElementById('inpGoalY');
+    const btnSetCoords = document.getElementById('btnSetCoords');
+
+    const btnExportMaze = document.getElementById('btnExportMaze');
+    const btnImportMaze = document.getElementById('btnImportMaze');
+    const fileImportMaze = document.getElementById('fileImportMaze');
+    const paletteButtons = document.querySelectorAll('.palette-swatch');
+
+    // Cell DOM References
+    let cellElements = [];
+
+    /* ==========================================================================
+       3. GRID INITIALIZATION & RESIZING ARCHITECTURE
+       ========================================================================== */
+    function initGridDOM() {
+      gridEl.innerHTML = '';
+      gridEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+      gridEl.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
+      gridEl.style.aspectRatio = `${COLS} / ${ROWS}`;
+
+      cellElements = new Array(TOTAL_CELLS);
+
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell cell-empty';
+        cell.dataset.index = i;
+
+        // Metric overlays for f, g, h values & terrain cost
+        const metricsDiv = document.createElement('div');
+        metricsDiv.className = 'cell-metrics';
+        metricsDiv.innerHTML = `
+          <div class="m-f">-</div>
+          <div class="m-gh"><span class="m-g">-</span><span class="m-h">-</span></div>
+          <div class="m-cost">${terrainCosts[i] > 1.0 ? `c:${terrainCosts[i]}` : ''}</div>
+        `;
+        cell.appendChild(metricsDiv);
+
+        gridEl.appendChild(cell);
+        cellElements[i] = cell;
+
+        // Restore wall or terrain classes if present
+        if (walls[i] === 1) {
+          cell.classList.add('cell-wall');
+        } else if (terrainCosts[i] === 2.0) {
+          cell.classList.add('cell-terrain-grass');
+        } else if (terrainCosts[i] === 4.0) {
+          cell.classList.add('cell-terrain-mud');
+        } else if (terrainCosts[i] === 8.0) {
+          cell.classList.add('cell-terrain-water');
+        }
+      }
+
+      updateEndpointClasses();
+      syncCoordinateInputs();
+    }
+
+    function updateEndpointClasses() {
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        if (cellElements[i]) {
+          cellElements[i].classList.remove('cell-start', 'cell-goal');
+        }
+      }
+      if (cellElements[startIdx]) cellElements[startIdx].classList.add('cell-start');
+      if (cellElements[goalIdx]) cellElements[goalIdx].classList.add('cell-goal');
+    }
+
+    function syncCoordinateInputs() {
+      const s = getCoords(startIdx);
+      const g = getCoords(goalIdx);
+      inpStartX.value = s.c;
+      inpStartY.value = s.r;
+      inpGoalX.value = g.c;
+      inpGoalY.value = g.r;
+      
+      inpStartX.max = COLS - 1;
+      inpStartY.max = ROWS - 1;
+      inpGoalX.max = COLS - 1;
+      inpGoalY.max = ROWS - 1;
+    }
+
+    function rebuildGrid(newRows, newCols) {
+      stopAnimation();
+      
+      // Update dimensions
+      ROWS = newRows;
+      COLS = newCols;
+      TOTAL_CELLS = ROWS * COLS;
+
+      // Reset typed arrays & heap fresh
+      walls = new Uint8Array(TOTAL_CELLS);
+      terrainCosts = new Float64Array(TOTAL_CELLS).fill(1.0);
+
+      // Clamp start & goal coordinates to new bounds
+      const sCoord = getCoords(startIdx);
+      const gCoord = getCoords(goalIdx);
+      let sr = Math.min(ROWS - 1, sCoord.r);
+      let sc = Math.min(COLS - 1, sCoord.c);
+      let gr = Math.min(ROWS - 1, gCoord.r);
+      let gc = Math.min(COLS - 1, gCoord.c);
+
+      if (sr === gr && sc === gc) {
+        if (gc + 1 < COLS) gc++;
+        else if (sc > 0) sc--;
+        else if (gr + 1 < ROWS) gr++;
+        else if (sr > 0) sr--;
+      }
+
+      startIdx = sr * COLS + sc;
+      goalIdx = gr * COLS + gc;
+
+      initGridDOM();
+      resetPathVisuals();
+      statusText.textContent = `Grid rebuilt to ${COLS}×${ROWS} cells. Existing walls cleared and aspect ratio adjusted.`;
+    }
+
+    /* ==========================================================================
+       4. POINTER DRAG & INTERACTION ENGINE
+       ========================================================================== */
+    let isPointerDown = false;
+    let dragMode = null; // 'paintWall', 'eraseWall', 'paintTerrain', 'moveStart', 'moveGoal'
+
+    function handlePointerDown(e) {
+      if (isRunning) return; // disable grid edits during active replay
+      
+      const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.grid-cell');
+      if (!target) return;
+
+      const idx = parseInt(target.dataset.index, 10);
+      if (isNaN(idx)) return;
+
+      // Clear previous search visualization if user begins drawing or dragging
+      if (currentSearchResult) {
+        resetPathVisuals();
+      }
+
+      isPointerDown = true;
+      gridEl.setPointerCapture(e.pointerId);
+
+      if (idx === startIdx) {
+        dragMode = 'moveStart';
+      } else if (idx === goalIdx) {
+        dragMode = 'moveGoal';
+      } else if (currentPaintTool === 'wall') {
+        if (walls[idx] === 1) {
+          dragMode = 'eraseWall';
+          setWallState(idx, 0);
+        } else {
+          dragMode = 'paintWall';
+          setWallState(idx, 1);
+        }
+      } else if (currentPaintTool === 'terrain') {
+        dragMode = 'paintTerrain';
+        setWallState(idx, 0); // terrain replaces wall
+        setTerrainCost(idx, currentTerrainCost);
+      }
+    }
+
+    function handlePointerMove(e) {
+      if (!isPointerDown || isRunning) return;
+
+      const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.grid-cell');
+      if (!target) return;
+
+      const idx = parseInt(target.dataset.index, 10);
+      if (isNaN(idx)) return;
+
+      if (dragMode === 'moveStart') {
+        if (idx !== goalIdx && walls[idx] === 0 && idx !== startIdx) {
+          startIdx = idx;
+          updateEndpointClasses();
+          syncCoordinateInputs();
+        }
+      } else if (dragMode === 'moveGoal') {
+        if (idx !== startIdx && walls[idx] === 0 && idx !== goalIdx) {
+          goalIdx = idx;
+          updateEndpointClasses();
+          syncCoordinateInputs();
+        }
+      } else if (dragMode === 'paintWall') {
+        if (idx !== startIdx && idx !== goalIdx && walls[idx] === 0) {
+          setWallState(idx, 1);
+        }
+      } else if (dragMode === 'eraseWall') {
+        if (walls[idx] === 1) {
+          setWallState(idx, 0);
+        }
+      } else if (dragMode === 'paintTerrain') {
+        if (idx !== startIdx && idx !== goalIdx) {
+          setWallState(idx, 0);
+          setTerrainCost(idx, currentTerrainCost);
+        }
+      }
+    }
+
+    function handlePointerUp(e) {
+      isPointerDown = false;
+      dragMode = null;
+      try {
+        gridEl.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+
+    function setWallState(idx, isWall) {
+      walls[idx] = isWall;
+      const el = cellElements[idx];
+      if (!el) return;
+      if (isWall) {
+        el.classList.add('cell-wall');
+        el.classList.remove('cell-open', 'cell-closed', 'cell-path', 'cell-terrain-grass', 'cell-terrain-mud', 'cell-terrain-water');
+        terrainCosts[idx] = 1.0;
+        const mCost = el.querySelector('.m-cost');
+        if (mCost) mCost.textContent = '';
+      } else {
+        el.classList.remove('cell-wall');
+      }
+    }
+
+    function setTerrainCost(idx, cost) {
+      terrainCosts[idx] = cost;
+      const el = cellElements[idx];
+      if (!el) return;
+      el.classList.remove('cell-terrain-grass', 'cell-terrain-mud', 'cell-terrain-water');
+      if (cost === 2.0) {
+        el.classList.add('cell-terrain-grass');
+      } else if (cost === 4.0) {
+        el.classList.add('cell-terrain-mud');
+      } else if (cost === 8.0) {
+        el.classList.add('cell-terrain-water');
+      }
+      const mCost = el.querySelector('.m-cost');
+      if (mCost) {
+        mCost.textContent = cost > 1.0 ? `c:${cost}` : '';
+      }
+    }
+
+    gridEl.addEventListener('pointerdown', handlePointerDown);
+    gridEl.addEventListener('pointermove', handlePointerMove);
+    gridEl.addEventListener('pointerup', handlePointerUp);
+    gridEl.addEventListener('pointercancel', handlePointerUp);
+
+    /* ==========================================================================
+       5. HEURISTIC COMPUTATION & UTILITIES
+       ========================================================================== */
+    function getCoords(index) {
+      return { r: Math.floor(index / COLS), c: index % COLS };
+    }
+
+    function getIndex(r, c) {
+      return r * COLS + c;
+    }
+
+    function calculateHeuristic(idxA, idxB, mode) {
+      if (mode === 'none') return 0;
+
+      const a = getCoords(idxA);
+      const b = getCoords(idxB);
+      const dr = Math.abs(a.r - b.r);
+      const dc = Math.abs(a.c - b.c);
+
+      switch (mode) {
+        case 'manhattan':
+          return dr + dc;
+        case 'euclidean':
+          return Math.hypot(dr, dc);
+        case 'diagonal':
+          // Octile distance: straight moves cost 1.0, diagonal moves cost sqrt(2)
+          return (dr + dc) + (SQRT_2 - 2) * Math.min(dr, dc);
+        default:
+          return dr + dc;
+      }
+    }
+
+    /* ==========================================================================
+       6. SYNCHRONOUS A* SEARCH ENGINE WITH EVENT LOGGING & WEIGHTED TERRAIN
+       ==========================================================================
+       Runs synchronously first to measure exact CPU execution time.
+       Records every state transition in an eventLog array:
+         [kind, nodeIndex, g, h] where kind 1 = queued, kind 2 = expanded.
+       Incorporates per-cell terrain weights:
+         Orthogonal cost = 1.0 * terrainCost[neighbor]
+         Diagonal cost = sqrt(2) * terrainCost[neighbor]
+       ========================================================================== */
+    function runSearchSynchronous(start, goal, heuristicType, allowDiag) {
+      const startTime = performance.now();
+
+      // Typed arrays for high-performance memory representation
+      const gScore = new Float64Array(TOTAL_CELLS).fill(Infinity);
+      const parent = new Int32Array(TOTAL_CELLS).fill(-1);
+      const closed = new Uint8Array(TOTAL_CELLS); // 1 = in closed set
+      const eventLog = [];
+
+      const openHeap = new MinHeap();
+
+      gScore[start] = 0;
+      const startH = calculateHeuristic(start, goal, heuristicType);
+      openHeap.push({ index: start, f: startH, h: startH });
+      eventLog.push([EVENT_QUEUED, start, 0, startH]);
+
+      let nodesVisited = 0;
+      let nodesQueued = 1;
+      let found = false;
+
+      while (!openHeap.isEmpty()) {
+        const currentItem = openHeap.pop();
+        const curr = currentItem.index;
+
+        // Skip stale heap entries
+        if (closed[curr] === 1) {
+          continue;
+        }
+
+        closed[curr] = 1;
+        nodesVisited++;
+        eventLog.push([EVENT_EXPANDED, curr, gScore[curr], currentItem.h]);
+
+        if (curr === goal) {
+          found = true;
+          break;
+        }
+
+        const currCoord = getCoords(curr);
+
+        // Define neighbors: 4 orthogonal, optionally 4 diagonal
+        const neighbors = [
+          { r: currCoord.r - 1, c: currCoord.c, baseCost: 1.0, isDiag: false },
+          { r: currCoord.r + 1, c: currCoord.c, baseCost: 1.0, isDiag: false },
+          { r: currCoord.r, c: currCoord.c - 1, baseCost: 1.0, isDiag: false },
+          { r: currCoord.r, c: currCoord.c + 1, baseCost: 1.0, isDiag: false }
+        ];
+
+        if (allowDiag) {
+          neighbors.push(
+            { r: currCoord.r - 1, c: currCoord.c - 1, baseCost: SQRT_2, isDiag: true, dr: -1, dc: -1 },
+            { r: currCoord.r - 1, c: currCoord.c + 1, baseCost: SQRT_2, isDiag: true, dr: -1, dc: +1 },
+            { r: currCoord.r + 1, c: currCoord.c - 1, baseCost: SQRT_2, isDiag: true, dr: +1, dc: -1 },
+            { r: currCoord.r + 1, c: currCoord.c + 1, baseCost: SQRT_2, isDiag: true, dr: +1, dc: +1 }
+          );
+        }
+
+        for (let i = 0; i < neighbors.length; i++) {
+          const n = neighbors[i];
+          if (n.r < 0 || n.r >= ROWS || n.c < 0 || n.c >= COLS) continue;
+
+          const nIdx = getIndex(n.r, n.c);
+          if (walls[nIdx] === 1 || closed[nIdx] === 1) continue;
+
+          // Block corner cutting: diagonal move is invalid if BOTH adjacent orthogonal cells are walls
+          if (n.isDiag) {
+            const wallAdjacent1 = walls[getIndex(currCoord.r + n.dr, currCoord.c)] === 1;
+            const wallAdjacent2 = walls[getIndex(currCoord.r, currCoord.c + n.dc)] === 1;
+            if (wallAdjacent1 && wallAdjacent2) {
+              continue; // blocked corner cut
+            }
+          }
+
+          // Weighted terrain cost calculation: base step cost * target cell terrain multiplier
+          const stepCost = n.baseCost * terrainCosts[nIdx];
+          const tentativeG = gScore[curr] + stepCost;
+
+          if (tentativeG < gScore[nIdx]) {
+            parent[nIdx] = curr;
+            gScore[nIdx] = tentativeG;
+            const hVal = calculateHeuristic(nIdx, goal, heuristicType);
+            const fVal = tentativeG + hVal;
+
+            openHeap.push({ index: nIdx, f: fVal, h: hVal });
+            nodesQueued++;
+            eventLog.push([EVENT_QUEUED, nIdx, tentativeG, hVal]);
+          }
+        }
+      }
+
+      const endTime = performance.now();
+      const executionTime = endTime - startTime;
+
+      // Reconstruct path
+      const path = [];
+      let totalCost = 0;
+
+      if (found) {
+        let curr = goal;
+        while (curr !== -1) {
+          path.push(curr);
+          curr = parent[curr];
+        }
+        path.reverse();
+        totalCost = gScore[goal];
+      }
+
+      return {
+        found,
+        path,
+        pathCost: totalCost,
+        visitedCount: nodesVisited,
+        queuedCount: nodesQueued,
+        executionTimeMs: executionTime,
+        eventLog
+      };
+    }
+
+    /* ==========================================================================
+       7. REPLAY CONTROLLER & ANIMATION SYSTEM
+       ========================================================================== */
+    let currentSearchResult = null;
+    let eventCursor = 0;
+    let pathCursor = 0;
+    let isRunning = false;
+    let isPaused = false;
+    let animationTimerId = null;
+
+    function resetPathVisuals() {
+      stopAnimation();
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        if (walls[i] === 0) {
+          let cls = 'grid-cell cell-empty';
+          if (terrainCosts[i] === 2.0) cls += ' cell-terrain-grass';
+          else if (terrainCosts[i] === 4.0) cls += ' cell-terrain-mud';
+          else if (terrainCosts[i] === 8.0) cls += ' cell-terrain-water';
+          cellElements[i].className = cls;
+
+          const mF = cellElements[i].querySelector('.m-f');
+          const mG = cellElements[i].querySelector('.m-g');
+          const mH = cellElements[i].querySelector('.m-h');
+          const mCost = cellElements[i].querySelector('.m-cost');
+          if (mF) mF.textContent = '-';
+          if (mG) mG.textContent = '-';
+          if (mH) mH.textContent = '-';
+          if (mCost) mCost.textContent = terrainCosts[i] > 1.0 ? `c:${terrainCosts[i]}` : '';
+        }
+      }
+      updateEndpointClasses();
+      syncCoordinateInputs();
+      
+      statVisited.textContent = '0';
+      statQueued.textContent = '0';
+      statLength.textContent = '0';
+      statCost.textContent = '0.00';
+      statTime.textContent = '0.0 ms';
+      statusText.textContent = 'Ready. Click Start search or Step to begin traversal.';
+      
+      eventCursor = 0;
+      pathCursor = 0;
+      currentSearchResult = null;
+      btnPause.disabled = true;
+      btnPause.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        Pause
+      `;
+    }
+
+    function stopAnimation() {
+      isRunning = false;
+      isPaused = false;
+      if (animationTimerId) {
+        cancelAnimationFrame(animationTimerId);
+        clearTimeout(animationTimerId);
+        animationTimerId = null;
+      }
+    }
+
+    function startSearchWorkflow() {
+      resetPathVisuals();
+
+      const heuristic = selectHeuristic.value;
+      const allowDiag = chkDiagonal.checked;
+
+      // Run synchronously first to generate log & metrics
+      currentSearchResult = runSearchSynchronous(startIdx, goalIdx, heuristic, allowDiag);
+
+      statTime.textContent = currentSearchResult.executionTimeMs.toFixed(2) + ' ms';
+      btnPause.disabled = false;
+      isRunning = true;
+      isPaused = false;
+
+      statusText.textContent = `Search running with ${selectHeuristic.options[selectHeuristic.selectedIndex].text}...`;
+
+      animateLoop();
+    }
+
+    function getAnimationDelay() {
+      const speed = parseInt(sliderSpeed.value, 10);
+      // Speed 1: 160ms delay, Speed 20: 2ms delay
+      return Math.max(2, Math.floor(180 / speed));
+    }
+
+    function animateLoop() {
+      if (!isRunning || isPaused) return;
+
+      const speed = parseInt(sliderSpeed.value, 10);
+      // At higher speeds (speed > 10), process multiple events per tick
+      const stepsPerTick = speed > 10 ? (speed - 9) * 2 : 1;
+
+      for (let s = 0; s < stepsPerTick; s++) {
+        if (eventCursor < currentSearchResult.eventLog.length) {
+          applyEvent(currentSearchResult.eventLog[eventCursor]);
+          eventCursor++;
+        } else {
+          // Event log completed, animate path reconstruction
+          if (currentSearchResult.found) {
+            if (pathCursor < currentSearchResult.path.length) {
+              const pIdx = currentSearchResult.path[pathCursor];
+              if (pIdx !== startIdx && pIdx !== goalIdx) {
+                cellElements[pIdx].classList.add('cell-path');
+              }
+              pathCursor++;
+            } else {
+              // Path finished
+              finishSearch();
+              return;
+            }
+          } else {
+            // No path found
+            finishSearch();
+            return;
+          }
+        }
+      }
+
+      const delay = getAnimationDelay();
+      if (delay <= 4) {
+        animationTimerId = requestAnimationFrame(animateLoop);
+      } else {
+        animationTimerId = setTimeout(() => {
+          animationTimerId = requestAnimationFrame(animateLoop);
+        }, delay);
+      }
+    }
+
+    function applyEvent(ev) {
+      const [type, idx, g, h] = ev;
+      const cell = cellElements[idx];
+      const coords = getCoords(idx);
+      const f = g + h;
+
+      // Update inner metric display
+      const mF = cell.querySelector('.m-f');
+      const mG = cell.querySelector('.m-g');
+      const mH = cell.querySelector('.m-h');
+      if (mF) mF.textContent = f.toFixed(1);
+      if (mG) mG.textContent = g.toFixed(1);
+      if (mH) mH.textContent = h.toFixed(1);
+
+      if (idx !== startIdx && idx !== goalIdx) {
+        if (type === EVENT_QUEUED) {
+          if (!cell.classList.contains('cell-closed')) {
+            cell.classList.add('cell-open');
+          }
+        } else if (type === EVENT_EXPANDED) {
+          cell.classList.remove('cell-open');
+          cell.classList.add('cell-closed');
+        }
+      }
+
+      // Update live metrics & status
+      if (type === EVENT_EXPANDED) {
+        const v = parseInt(statVisited.textContent, 10) + 1;
+        statVisited.textContent = v;
+        const terrainText = terrainCosts[idx] > 1.0 ? `, cost: ${terrainCosts[idx]}×` : '';
+        statusText.textContent = `Expanded (${coords.c}, ${coords.r})${terrainText} — g: ${g.toFixed(2)}, h: ${h.toFixed(2)}, f: ${f.toFixed(2)}`;
+      } else if (type === EVENT_QUEUED) {
+        const q = parseInt(statQueued.textContent, 10) + 1;
+        statQueued.textContent = q;
+      }
+    }
+
+    function stepSearchWorkflow() {
+      // If not initialized, initialize
+      if (!currentSearchResult) {
+        const heuristic = selectHeuristic.value;
+        const allowDiag = chkDiagonal.checked;
+        currentSearchResult = runSearchSynchronous(startIdx, goalIdx, heuristic, allowDiag);
+        statTime.textContent = currentSearchResult.executionTimeMs.toFixed(2) + ' ms';
+        btnPause.disabled = false;
+        eventCursor = 0;
+        pathCursor = 0;
+      }
+
+      // Step forward by advancing to the next expanded node
+      if (eventCursor < currentSearchResult.eventLog.length) {
+        let ev = currentSearchResult.eventLog[eventCursor];
+        applyEvent(ev);
+        eventCursor++;
+
+        while (eventCursor < currentSearchResult.eventLog.length && 
+               currentSearchResult.eventLog[eventCursor][0] === EVENT_QUEUED) {
+          applyEvent(currentSearchResult.eventLog[eventCursor]);
+          eventCursor++;
+        }
+      } else if (currentSearchResult.found && pathCursor < currentSearchResult.path.length) {
+        const pIdx = currentSearchResult.path[pathCursor];
+        if (pIdx !== startIdx && pIdx !== goalIdx) {
+          cellElements[pIdx].classList.add('cell-path');
+        }
+        pathCursor++;
+        if (pathCursor >= currentSearchResult.path.length) {
+          finishSearch();
+        }
+      } else {
+        finishSearch();
+      }
+    }
+
+    function togglePause() {
+      if (!isRunning) return;
+      isPaused = !isPaused;
+      if (isPaused) {
+        btnPause.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Resume
+        `;
+        statusText.textContent = 'Paused. Click Resume or Step to proceed.';
+      } else {
+        btnPause.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          Pause
+        `;
+        statusText.textContent = 'Resumed search.';
+        animateLoop();
+      }
+    }
+
+    function finishSearch() {
+      isRunning = false;
+      isPaused = false;
+      btnPause.disabled = true;
+
+      statVisited.textContent = currentSearchResult.visitedCount;
+      statQueued.textContent = currentSearchResult.queuedCount;
+
+      if (currentSearchResult.found) {
+        statLength.textContent = currentSearchResult.path.length;
+        statCost.textContent = currentSearchResult.pathCost.toFixed(2);
+        statusText.textContent = `Path found — ${currentSearchResult.path.length} nodes, cost ${currentSearchResult.pathCost.toFixed(2)}, after visiting ${currentSearchResult.visitedCount} nodes.`;
+      } else {
+        statLength.textContent = '0';
+        statCost.textContent = '0.00';
+        statusText.textContent = 'No path found. The goal is walled off from the start.';
+      }
+    }
+
+    /* ==========================================================================
+       8. RANDOM MAZE GENERATOR
+       ========================================================================== */
+    function generateRandomMaze() {
+      resetPathVisuals();
+      
+      // Clear existing walls
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        setWallState(i, 0);
+      }
+
+      // Generate random obstacles with ~28% density, leaving paths clear
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const idx = getIndex(r, c);
+          if (idx === startIdx || idx === goalIdx) continue;
+
+          // Keep a 1-cell radius buffer around start and goal
+          const dStart = Math.hypot(r - getCoords(startIdx).r, c - getCoords(startIdx).c);
+          const dGoal  = Math.hypot(r - getCoords(goalIdx).r, c - getCoords(goalIdx).c);
+          if (dStart <= 1.2 || dGoal <= 1.2) continue;
+
+          // Structured pseudo-maze clustering
+          const rand = Math.random();
+          if (rand < 0.28) {
+            setWallState(idx, 1);
+          }
+        }
+      }
+
+      statusText.textContent = 'Generated random maze obstacles. Start search to find a route!';
+    }
+
+    /* ==========================================================================
+       9. COMPARE WITH DIJKSTRA BENCHMARK
+       ========================================================================== */
+    function runCompareWithDijkstra() {
+      resetPathVisuals();
+
+      const heuristic = selectHeuristic.value === 'none' ? 'manhattan' : selectHeuristic.value;
+      const allowDiag = chkDiagonal.checked;
+
+      // 1. Run A* with chosen heuristic
+      const resAStar = runSearchSynchronous(startIdx, goalIdx, heuristic, allowDiag);
+
+      // 2. Run Dijkstra (A* with h(n) = 0)
+      const resDijkstra = runSearchSynchronous(startIdx, goalIdx, 'none', allowDiag);
+
+      // Render A* on the visualizer grid immediately
+      resAStar.eventLog.forEach(ev => applyEvent(ev));
+      if (resAStar.found) {
+        resAStar.path.forEach(idx => {
+          if (idx !== startIdx && idx !== goalIdx) {
+            cellElements[idx].classList.add('cell-path');
+          }
+        });
+      }
+
+      statVisited.textContent = resAStar.visitedCount;
+      statQueued.textContent = resAStar.queuedCount;
+      statLength.textContent = resAStar.found ? resAStar.path.length : 0;
+      statCost.textContent = resAStar.pathCost.toFixed(2);
+      statTime.textContent = resAStar.executionTimeMs.toFixed(2) + ' ms';
+
+      // Populate Comparison Table
+      const heuristicName = selectHeuristic.options[selectHeuristic.selectedIndex].text;
+      const diffVisited = resDijkstra.visitedCount - resAStar.visitedCount;
+      const percentFewer = resDijkstra.visitedCount > 0 
+        ? ((diffVisited / resDijkstra.visitedCount) * 100).toFixed(1)
+        : '0.0';
+
+      compareTableBody.innerHTML = `
+        <tr>
+          <td><strong style="color: var(--accent-cyan);">A* Search</strong></td>
+          <td>${heuristicName}</td>
+          <td class="mono-cell">${resAStar.visitedCount}</td>
+          <td class="mono-cell">${resAStar.queuedCount}</td>
+          <td class="mono-cell">${resAStar.found ? resAStar.path.length : 'None'}</td>
+          <td class="mono-cell">${resAStar.pathCost.toFixed(2)}</td>
+          <td class="mono-cell">${resAStar.executionTimeMs.toFixed(2)} ms</td>
+        </tr>
+        <tr>
+          <td><strong style="color: #a78bfa;">Dijkstra's Algorithm</strong></td>
+          <td>None &mdash; h(n) = 0</td>
+          <td class="mono-cell">${resDijkstra.visitedCount}</td>
+          <td class="mono-cell">${resDijkstra.queuedCount}</td>
+          <td class="mono-cell">${resDijkstra.found ? resDijkstra.path.length : 'None'}</td>
+          <td class="mono-cell">${resDijkstra.pathCost.toFixed(2)}</td>
+          <td class="mono-cell">${resDijkstra.executionTimeMs.toFixed(2)} ms</td>
+        </tr>
+      `;
+
+      if (diffVisited >= 0) {
+        compareSummary.innerHTML = `&rarr; A* explored <strong>${diffVisited} fewer nodes</strong> than Dijkstra (${percentFewer}% search space reduction) while guaranteeing the identical optimal path cost (${resAStar.pathCost.toFixed(2)}).`;
+        statusText.textContent = `A* visited ${diffVisited} fewer nodes than Dijkstra (${percentFewer}% reduction).`;
+      } else {
+        compareSummary.innerHTML = `&rarr; Both algorithms traversed similar frontier spaces for this obstacle layout.`;
+        statusText.textContent = `Comparison complete. Visualized A* search on the grid.`;
+      }
+
+      comparePanel.classList.add('active');
+    }
+
+    /* ==========================================================================
+       10. ADVANCED INPUT EVENT LISTENERS (GRID SIZE, TERRAIN, COORDS, IMPORT/EXPORT)
+       ========================================================================== */
+    
+    // Feature 1: Manual Grid Size
+    btnApplyGridSize.addEventListener('click', () => {
+      const newRows = parseInt(inputRows.value, 10);
+      const newCols = parseInt(inputCols.value, 10);
+      if (isNaN(newRows) || isNaN(newCols) || newRows < 5 || newRows > 60 || newCols < 5 || newCols > 60) {
+        statusText.textContent = "Grid size rejected: Rows and Cols must be integers between 5 and 60.";
+        return;
+      }
+      rebuildGrid(newRows, newCols);
+    });
+
+    // Feature 2: Paint Tool & Terrain Swatch Selection
+    paletteButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        paletteButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentPaintTool = btn.dataset.tool;
+        if (currentPaintTool === 'terrain') {
+          currentTerrainCost = parseFloat(btn.dataset.cost);
+          statusText.textContent = `Terrain brush active (${btn.textContent.trim()}). Drag to paint on grid.`;
+        } else {
+          statusText.textContent = `Wall brush active. Drag to paint walls (drag on wall to erase).`;
+        }
+      });
+    });
+
+    // Feature 3: Coordinate Input for Start / Goal
+    btnSetCoords.addEventListener('click', () => {
+      const sx = parseInt(inpStartX.value, 10);
+      const sy = parseInt(inpStartY.value, 10);
+      const gx = parseInt(inpGoalX.value, 10);
+      const gy = parseInt(inpGoalY.value, 10);
+
+      // Validation
+      if (isNaN(sx) || isNaN(sy) || isNaN(gx) || isNaN(gy)) {
+        statusText.textContent = "Coordinates rejected: All coordinates must be valid numbers.";
+        return;
+      }
+      if (sx < 0 || sx >= COLS || sy < 0 || sy >= ROWS || gx < 0 || gx >= COLS || gy < 0 || gy >= ROWS) {
+        statusText.textContent = `Coordinates rejected: Out of bounds. Valid X: 0..${COLS-1}, Valid Y: 0..${ROWS-1}.`;
+        return;
+      }
+      if (sx === gx && sy === gy) {
+        statusText.textContent = "Coordinates rejected: Start and Goal cannot be at the exact same position.";
+        return;
+      }
+      const newStart = getIndex(sy, sx);
+      const newGoal = getIndex(gy, gx);
+
+      if (walls[newStart] === 1) {
+        statusText.textContent = `Coordinates rejected: Start cell (${sx}, ${sy}) is currently a wall.`;
+        return;
+      }
+      if (walls[newGoal] === 1) {
+        statusText.textContent = `Coordinates rejected: Goal cell (${gx}, ${gy}) is currently a wall.`;
+        return;
+      }
+
+      startIdx = newStart;
+      goalIdx = newGoal;
+      updateEndpointClasses();
+      resetPathVisuals();
+      statusText.textContent = `Coordinates updated: Start (${sx}, ${sy}), Goal (${gx}, ${gy}).`;
+    });
+
+    // Feature 4: Maze Export (JSON Download)
+    btnExportMaze.addEventListener('click', () => {
+      const wallIndices = [];
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        if (walls[i] === 1) wallIndices.push(i);
+      }
+
+      const terrainMap = {};
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        if (terrainCosts[i] > 1.0) {
+          terrainMap[i] = terrainCosts[i];
+        }
+      }
+
+      const s = getCoords(startIdx);
+      const g = getCoords(goalIdx);
+
+      const exportData = {
+        rows: ROWS,
+        cols: COLS,
+        start: [s.c, s.r],
+        goal: [g.c, g.r],
+        walls: wallIndices,
+        terrain: terrainMap
+      };
+
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `astar_maze_${COLS}x${ROWS}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      statusText.textContent = `Exported maze file (${COLS}×${ROWS}, ${wallIndices.length} walls, ${Object.keys(terrainMap).length} weighted tiles).`;
+    });
+
+    // Feature 4: Maze Import (JSON Upload & Validation)
+    btnImportMaze.addEventListener('click', () => {
+      fileImportMaze.click();
+    });
+
+    fileImportMaze.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const data = JSON.parse(evt.target.result);
+
+          // Deep Validation
+          if (!data || typeof data !== 'object') throw new Error("Root JSON must be a valid object.");
+          if (!Number.isInteger(data.rows) || data.rows < 5 || data.rows > 60) {
+            throw new Error("Invalid rows: must be an integer between 5 and 60.");
+          }
+          if (!Number.isInteger(data.cols) || data.cols < 5 || data.cols > 60) {
+            throw new Error("Invalid cols: must be an integer between 5 and 60.");
+          }
+          if (!Array.isArray(data.start) || data.start.length !== 2 ||
+              !Number.isInteger(data.start[0]) || !Number.isInteger(data.start[1])) {
+            throw new Error("Invalid start coordinate [X, Y].");
+          }
+          if (!Array.isArray(data.goal) || data.goal.length !== 2 ||
+              !Number.isInteger(data.goal[0]) || !Number.isInteger(data.goal[1])) {
+            throw new Error("Invalid goal coordinate [X, Y].");
+          }
+
+          const [sx, sy] = data.start;
+          const [gx, gy] = data.goal;
+          if (sx < 0 || sx >= data.cols || sy < 0 || sy >= data.rows ||
+              gx < 0 || gx >= data.cols || gy < 0 || gy >= data.rows) {
+            throw new Error("Start or goal coordinates are out of grid bounds.");
+          }
+          if (sx === gx && sy === gy) {
+            throw new Error("Start and goal cannot be identical.");
+          }
+
+          if (!Array.isArray(data.walls)) {
+            throw new Error("Walls must be an array of cell indices.");
+          }
+
+          const total = data.rows * data.cols;
+          for (let i = 0; i < data.walls.length; i++) {
+            const w = data.walls[i];
+            if (!Number.isInteger(w) || w < 0 || w >= total) {
+              throw new Error(`Wall index ${w} is out of bounds for a ${data.cols}×${data.rows} grid.`);
+            }
+          }
+
+          if (data.terrain && typeof data.terrain !== 'object') {
+            throw new Error("Terrain must be an object mapping indices to costs.");
+          }
+
+          // Validation Passed: Apply Imported Grid Configuration
+          rebuildGrid(data.rows, data.cols);
+          inputRows.value = data.rows;
+          inputCols.value = data.cols;
+
+          startIdx = sy * data.cols + sx;
+          goalIdx = gy * data.cols + gx;
+
+          // Populate walls
+          for (let i = 0; i < data.walls.length; i++) {
+            const w = data.walls[i];
+            if (w !== startIdx && w !== goalIdx) {
+              setWallState(w, 1);
+            }
+          }
+
+          // Populate terrain
+          if (data.terrain) {
+            for (const [idxStr, cost] of Object.entries(data.terrain)) {
+              const idx = parseInt(idxStr, 10);
+              const numCost = Number(cost);
+              if (!isNaN(idx) && idx >= 0 && idx < total && numCost >= 1.0) {
+                if (idx !== startIdx && idx !== goalIdx && walls[idx] === 0) {
+                  setTerrainCost(idx, numCost);
+                }
+              }
+            }
+          }
+
+          updateEndpointClasses();
+          syncCoordinateInputs();
+          resetPathVisuals();
+          statusText.textContent = `Successfully imported maze (${data.cols}×${data.rows}, ${data.walls.length} walls).`;
+        } catch (err) {
+          statusText.textContent = `Import failed: ${err.message} Current grid was not modified.`;
+        }
+        e.target.value = ''; // Reset input to allow re-uploading the same file
+      };
+      reader.readAsText(file);
+    });
+
+    /* ==========================================================================
+       11. MAIN CONTROLS EVENT LISTENERS
+       ========================================================================== */
+    btnStart.addEventListener('click', () => {
+      comparePanel.classList.remove('active');
+      startSearchWorkflow();
+    });
+
+    btnPause.addEventListener('click', togglePause);
+    btnStep.addEventListener('click', () => {
+      comparePanel.classList.remove('active');
+      stepSearchWorkflow();
+    });
+    btnResetPath.addEventListener('click', resetPathVisuals);
+    
+    btnClearGrid.addEventListener('click', () => {
+      resetPathVisuals();
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        setWallState(i, 0);
+        setTerrainCost(i, 1.0);
+      }
+      comparePanel.classList.remove('active');
+      statusText.textContent = 'Cleared all walls, terrain, and paths.';
+    });
+
+    btnMaze.addEventListener('click', () => {
+      comparePanel.classList.remove('active');
+      generateRandomMaze();
+    });
+
+    btnCompare.addEventListener('click', runCompareWithDijkstra);
+
+    chkMetrics.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        gridEl.classList.add('show-metrics');
+      } else {
+        gridEl.classList.remove('show-metrics');
+      }
+    });
+
+    selectHeuristic.addEventListener('change', () => {
+      if (currentSearchResult) {
+        resetPathVisuals();
+      }
+    });
+
+    chkDiagonal.addEventListener('change', () => {
+      if (currentSearchResult) {
+        resetPathVisuals();
+      }
+    });
+
+    // Initialize Grid on Page Load
+    initGridDOM();
+  </script>
+</body>
+</html>
